@@ -1,0 +1,17 @@
+name = "CairoMakieZReorder"
+uuid = "c94b91fd-2e3b-4cef-b04d-55042483b5de"
+authors = ["pfuchter"]
+version = "1.0.0-DEV"
+
+[deps]
+CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
+Interpolations = "a98d9a8b-a2ab-59e6-89dd-64a1c18fca59"
+
+[compat]
+julia = "1.10"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
