@@ -4,9 +4,7 @@ struct myline
     z::Vector{Float64}
     color::Any
     distance_to_camera::Float64
-
 end
-
 
 """
 `get_lines(ax)`
@@ -76,11 +74,11 @@ end
 
 Splits each line into many lines and then replots all the lines in axis `ax` in order of distance from the camera. Allows for vectorized 3D axes using CairoMakie that respects Z-layering.
 """
-function replot_lines!(ax)
+function replot_lines!(ax,Nlines)
     lines_in_axis = get_lines(ax)
     x,y,z=get_line_data(lines_in_axis[1])
 
-    newlines=vcat([split_line(lines_in_axis[i],20,ax.scene.camera.eyeposition[]) for i in eachindex(lines_in_axis)]...)
+    newlines=vcat([split_line(lines_in_axis[i],Nlines,ax.scene.camera.eyeposition[]) for i in eachindex(lines_in_axis)]...)
     sort!(newlines,by=x->x.distance_to_camera)
     empty3!(ax,[Lines{Tuple{Vector{Point{3,Float32}}}}])
     for line in newlines[end:-1:1]
