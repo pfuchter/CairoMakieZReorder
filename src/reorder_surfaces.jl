@@ -1,91 +1,99 @@
-struct myline
-    x::Vector{Float64}
-    y::Vector{Float64}
-    z::Vector{Float64}
+struct mysurface
+    x::Matrix{Float64}
+    y::Matrix{Float64}
+    z::Matrix{Float64}
     color::Any
     distance_to_camera::Float64
-
 end
 
 
-"""
-`get_lines(ax)`
 
-Returns all of the line objects in an axis `ax`.
+
 """
-function get_lines(ax)
-    lines = []
-    for obj in ax.scene.plots
-        if typeof(obj) == Lines{Tuple{Vector{Point{3,Float32}}}} && length(obj[1][]) < 100
-            push!(lines,obj)
+`split_surface(surface,Nx,Ny,eyeposition)`
+
+Splits up surface `surface` into `Nx*Ny` sub-surfaces and returns a vector of `mysurface` objects.
+
+`Nx` and `Ny` are the number of sub-surfaces in the x and y directions respectively. (e.g. how the x,y,z matrices of the surface are split up)
+
+`eyeposition` is the position of the camera in 3D space and is used to sort the sub-surfaces by distance from the camera.
+"""
+function split_surface(surface,Nx,Ny,eyeposition)
+    s = surface
+    x = s[1][]
+    y = s[2][]
+    z = s[3][]
+    color = s.color[]
+    # colorrange = s.colorrange[]
+
+    # if s.color[] isa Matrix{Float32}
+    #     colorrange = (minimum(s.color[]),maximum(s.color[]))
+    # else
+    #     colorrange = nothing
+    # end
+
+    newsurfaces=Vector{mysurface}()
+
+    interp_x = linear_interpolation((1:size(x,1),1:size(x,2)),x)
+    interp_y = linear_interpolation((1:size(y,1),1:size(y,2)),y)
+    interp_z = linear_interpolation((1:size(z,1),1:size(z,2)),z)
+
+    total_width  = size(x,2)-1
+    total_height = size(x,1)-1
+
+    sub_surface_width = total_width/Ny
+    sub_surface_height = total_height/Nx
+
+    sub_surface_Nx = 4
+    sub_surface_Ny = 10
+
+    for i in 1:Nx
+        stretch_factor_x = 0.05 * (i<Nx) + 0
+        for j in 1:Ny                        
+            stretch_factor_y = 0.05 * (j<Ny) + 0
+            row_start = 1+(i-1)*sub_surface_height
+            row_end = 1+i*sub_surface_height + sub_surface_height*stretch_factor_x
+            col_start = 1+(j-1)*sub_surface_width
+            col_end = 1+j*sub_surface_width + sub_surface_width*stretch_factor_y
+
+            x_surface = [interp_x(i,j) for i in range(row_start,row_end,length=sub_surface_Nx), j in range(col_start,col_end,length=sub_surface_Ny)]
+            y_surface = [interp_y(i,j) for i in range(row_start,row_end,length=sub_surface_Nx), j in range(col_start,col_end,length=sub_surface_Ny)]
+            z_surface = [interp_z(i,j) for i in range(row_start,row_end,length=sub_surface_Nx), j in range(col_start,col_end,length=sub_surface_Ny)]
+            distance_from_cam = norm([mean(x_surface),mean(y_surface),mean(z_surface)] .- eyeposition)
+            push!(newsurfaces,mysurface(x_surface,y_surface,z_surface,s.color,distance_from_cam))
         end
     end
-    lines
+    return newsurfaces
 end
 
-"""
-`get_line_data(line)`
 
-Returns the x, y and z data of line object `line`
-"""
-function get_line_data(line)
-    points = line[1][]
-    xyz = hcat(points...)'
-    x,y,z = xyz[:,1],xyz[:,2],xyz[:,3]
-end
-
-"""
-`split_line(line,Nlines)`
-
-Takes a Makie `line` object and splits into Nlines `myline` objects. 
-"""
-function split_line(line,Nlines,eyeposition)
-    x,y,z = get_line_data(line)
-    color = line.color[]
-    Ndata = length(x)
-    
-    interp_x = linear_interpolation(1:Ndata,x)
-    interp_y = linear_interpolation(1:Ndata,y)
-    interp_z = linear_interpolation(1:Ndata,z)
-
-    line_endpoints = range(1,Ndata,length=Nlines+1)    
-    width = line_endpoints[2] - line_endpoints[1]
-
-    newlines = Vector{myline}()
-
-    for i in 1:Nlines
-        #Make each subline 5% longer than original so sublines all overlap and there are no gaps        
-        stretch_factor = 0.05 * (i != 1 && i != Nlines) + 0
-        
-        start = line_endpoints[i] - width*stretch_factor
-        stop = line_endpoints[i+1] + width*stretch_factor
-
-        xline = [interp_x(t) for t in range(start,stop,length=10)]
-        yline = [interp_y(t) for t in range(start,stop,length=10)]
-        zline = [interp_z(t) for t in range(start,stop,length=10)]
-        distance_from_cam = norm([mean(xline),mean(yline),mean(zline)] .- eyeposition)
-
-        push!(newlines,myline(xline,yline,zline,color,distance_from_cam))
+function get_surfaces(ax)
+    surfaces = []
+    for obj in ax.scene.plots
+        if typeof(obj) == Surface{Tuple{Matrix{Float32}, Matrix{Float32}, Matrix{Float32}}}
+            push!(surfaces,obj)
+        end
     end
-    
-    newlines
+    surfaces
 end
 
 """
-`replot_lines!(ax)`
+`replot_surfaces!(ax)`
 
-Splits each line into many lines and then replots all the lines in axis `ax` in order of distance from the camera. Allows for vectorized 3D axes using CairoMakie that respects Z-layering.
+Splits each surface into many surfaces and then replots all the lines in axis `ax` in order of distance from the camera. Allows for vectorized 3D axes using CairoMakie that respects Z-layering.
 """
-function replot_lines!(ax)
-    lines_in_axis = get_lines(ax)
-    x,y,z=get_line_data(lines_in_axis[1])
+function replot_surfaces!(ax)
+    surfaces_in_axis = get_surfaces(ax)
+    newsurfaces=vcat([split_surface(surfaces_in_axis[i],10,1,ax.scene.camera.eyeposition[]) for i in eachindex(surfaces_in_axis)]...)
+    sort!(newsurfaces,by=x->x.distance_to_camera)
+    empty3!(ax,[Surface{Tuple{Matrix{Float32}, Matrix{Float32}, Matrix{Float32}}}])
 
-    newlines=vcat([split_line(lines_in_axis[i],20,ax.scene.camera.eyeposition[]) for i in eachindex(lines_in_axis)]...)
-    sort!(newlines,by=x->x.distance_to_camera)
-    empty3!(ax,[Lines{Tuple{Vector{Point{3,Float32}}}}])
-    for line in newlines[end:-1:1]
-        lines!(ax,line.x,line.y,line.z,color=line.color)
+    
+    for s in newsurfaces[end:-1:1]
+            surface!(ax,s.x,s.y,s.z,color=s.color,rasterize=10)
     end
     nothing
 end
+
+
 
