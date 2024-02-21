@@ -28,7 +28,7 @@ using Test
         ax2.azimuth=4.1
         ax2.elevation=0.3
     
-        replot_surfaces!(ax2)
+        replot_surfaces!(ax2,4,4,20,20)
         
         f
     end
@@ -54,7 +54,7 @@ using Test
         lines!(ax2,cos.(theta),sin.(theta),cos.(theta))
         lines!(ax2,1.5.*cos.(theta),1.5.*sin.(theta),2 .*cos.(theta))
         
-        replot_lines!(ax2)
+        replot_lines!(ax2,20)
         f
     end    
 
