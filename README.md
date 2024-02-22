@@ -70,9 +70,11 @@ function test_replot_surfaces()
 ```
 
 Corrected surfaces:
+
 ![image](https://github.com/pfuchter/CairoMakieZReorder/assets/93337642/645466cb-6212-45cb-8966-866c53085744)
 
 Corrected lines:
+
 ![image](https://github.com/pfuchter/CairoMakieZReorder/assets/93337642/6cacc7c0-e26d-4409-8d8d-f401d1e86327)
 
 
