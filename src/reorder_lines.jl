@@ -14,7 +14,7 @@ Returns all of the line objects in an axis `ax`.
 function get_lines(ax)
     lines = []
     for obj in ax.scene.plots
-        if typeof(obj) == Lines{Tuple{Vector{Point{3,Float32}}}} && length(obj[1][]) < 100
+        if typeof(obj) == Lines{Tuple{Vector{Point{3,Float32}}}} && length(obj[1][]) < 100 
             push!(lines,obj)
         end
     end
@@ -51,6 +51,8 @@ function split_line(line,Nlines,eyeposition)
 
     newlines = Vector{myline}()
 
+    new_line_discretisation = max(2,round(Ndata / Nlines)) |> Int
+
     for i in 1:Nlines
         #Make each subline 5% longer than original so sublines all overlap and there are no gaps        
         stretch_factor = 0.05 * (i != 1 && i != Nlines) + 0
@@ -58,9 +60,9 @@ function split_line(line,Nlines,eyeposition)
         start = line_endpoints[i] - width*stretch_factor
         stop = line_endpoints[i+1] + width*stretch_factor
 
-        xline = [interp_x(t) for t in range(start,stop,length=10)]
-        yline = [interp_y(t) for t in range(start,stop,length=10)]
-        zline = [interp_z(t) for t in range(start,stop,length=10)]
+        xline = [interp_x(t) for t in range(start,stop,length=new_line_discretisation)]
+        zline = [interp_z(t) for t in range(start,stop,length=new_line_discretisation)]
+        yline = [interp_y(t) for t in range(start,stop,length=new_line_discretisation)]
         distance_from_cam = norm([mean(xline),mean(yline),mean(zline)] .- eyeposition)
 
         push!(newlines,myline(xline,yline,zline,color,distance_from_cam))
