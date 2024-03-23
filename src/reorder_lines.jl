@@ -1,8 +1,8 @@
-struct myline2
+struct myline6
     x::Vector{Float64}
     y::Vector{Float64}
     z::Vector{Float64}
-    color::CairoMakie.Colorant
+    color::CairoMakie.ColorTypes.RGBA{Float64}
     distance_to_camera::Float64
 end
 
@@ -35,11 +35,12 @@ end
 """
 `split_line(line,Nlines)`
 
-Takes a Makie `line` object and splits into Nlines `myline2` objects. 
+Takes a Makie `line` object and splits into Nlines `myline6` objects. 
 """
 function split_line(line,Nlines,eyeposition)
     x,y,z = get_line_data(line)
     color = line.color[]
+
     Ndata = length(x)
     
     interp_x = linear_interpolation(1:Ndata,x)
@@ -49,7 +50,7 @@ function split_line(line,Nlines,eyeposition)
     line_endpoints = range(1,Ndata,length=Nlines+1)    
     width = line_endpoints[2] - line_endpoints[1]
 
-    newlines = Vector{myline2}()
+    newlines = Vector{myline6}()
 
     new_line_discretisation = max(2,round(Ndata / Nlines)) |> Int
 
@@ -65,31 +66,32 @@ function split_line(line,Nlines,eyeposition)
         yline = [interp_y(t) for t in range(start,stop,length=new_line_discretisation)]
         distance_from_cam = norm([mean(xline),mean(yline),mean(zline)] .- eyeposition)
 
-        push!(newlines,myline2(xline,yline,zline,color,distance_from_cam))
+        push!(newlines,myline6(xline,yline,zline,color,distance_from_cam))
     end
     
     newlines
 end
 
+
 """
 `replot_lines!(ax,Nlines)`
 
-Splits each line into `Nlines` lines and then replots all the lines in axis `ax` in order of distance from the camera. Allows for vectorized 3D axes using CairoMakie that respects Z-layering.
+Splits lines passed into function by `lines_in_axis` in axis `ax` into `Nlines` lines and then replots all the lines in axis `ax` in order of distance from the camera. Allows for vectorized 3D axes using CairoMakie that respects Z-layering.
 """
-function replot_lines!(ax,Nlines)
-    lines_in_axis = get_lines(ax)
+function replot_lines!(ax,Nlines,lines_in_axis::Vector{Lines{Tuple{Vector{Point{3,Float32}}}}}=get_lines(ax))
 
     newlines1=[split_line(lines_in_axis[i],Nlines,ax.scene.camera.eyeposition[]) for i in eachindex(lines_in_axis)]
     newlines=reduce(vcat,newlines1)
     
-    display(newlines)
+
     sort!(newlines,by=x->x.distance_to_camera)
     
-    empty3!(ax,[Lines{Tuple{Vector{Point{3,Float32}}}}])
+    empty3!(ax,lines_in_axis) #remove the lines from the axis
     
     for line in newlines[end:-1:1]
         lines!(ax,line.x,line.y,line.z,color=line.color)
     end
     nothing
 end
+
 
