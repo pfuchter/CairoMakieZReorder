@@ -14,7 +14,7 @@ Returns all of the line objects in an axis `ax`.
 function get_lines(ax)
     lines = []
     for obj in ax.scene.plots
-        if typeof(obj) == Lines{Tuple{Vector{Point{3,Float32}}}} && length(obj[1][]) < 100 
+        if typeof(obj) == Lines{Tuple{Vector{Point{3,Float32}}}}
             push!(lines,obj)
         end
     end
@@ -72,9 +72,9 @@ function split_line(line,Nlines,eyeposition)
 end
 
 """
-`replot_lines!(ax)`
+`replot_lines!(ax,Nlines)`
 
-Splits each line into many lines and then replots all the lines in axis `ax` in order of distance from the camera. Allows for vectorized 3D axes using CairoMakie that respects Z-layering.
+Splits each line into `Nlines` lines and then replots all the lines in axis `ax` in order of distance from the camera. Allows for vectorized 3D axes using CairoMakie that respects Z-layering.
 """
 function replot_lines!(ax,Nlines)
     lines_in_axis = get_lines(ax)
