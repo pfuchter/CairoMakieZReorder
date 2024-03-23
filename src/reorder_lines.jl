@@ -1,8 +1,8 @@
-struct myline
+struct myline2
     x::Vector{Float64}
     y::Vector{Float64}
     z::Vector{Float64}
-    color::Any
+    color::CairoMakie.Colorant
     distance_to_camera::Float64
 end
 
@@ -12,7 +12,7 @@ end
 Returns all of the line objects in an axis `ax`.
 """
 function get_lines(ax)
-    lines = []
+    lines = Lines{Tuple{Vector{Point{3,Float32}}}}[]
     for obj in ax.scene.plots
         if typeof(obj) == Lines{Tuple{Vector{Point{3,Float32}}}}
             push!(lines,obj)
@@ -35,7 +35,7 @@ end
 """
 `split_line(line,Nlines)`
 
-Takes a Makie `line` object and splits into Nlines `myline` objects. 
+Takes a Makie `line` object and splits into Nlines `myline2` objects. 
 """
 function split_line(line,Nlines,eyeposition)
     x,y,z = get_line_data(line)
@@ -49,7 +49,7 @@ function split_line(line,Nlines,eyeposition)
     line_endpoints = range(1,Ndata,length=Nlines+1)    
     width = line_endpoints[2] - line_endpoints[1]
 
-    newlines = Vector{myline}()
+    newlines = Vector{myline2}()
 
     new_line_discretisation = max(2,round(Ndata / Nlines)) |> Int
 
@@ -65,7 +65,7 @@ function split_line(line,Nlines,eyeposition)
         yline = [interp_y(t) for t in range(start,stop,length=new_line_discretisation)]
         distance_from_cam = norm([mean(xline),mean(yline),mean(zline)] .- eyeposition)
 
-        push!(newlines,myline(xline,yline,zline,color,distance_from_cam))
+        push!(newlines,myline2(xline,yline,zline,color,distance_from_cam))
     end
     
     newlines
@@ -78,11 +78,15 @@ Splits each line into `Nlines` lines and then replots all the lines in axis `ax`
 """
 function replot_lines!(ax,Nlines)
     lines_in_axis = get_lines(ax)
-    x,y,z=get_line_data(lines_in_axis[1])
 
-    newlines=vcat([split_line(lines_in_axis[i],Nlines,ax.scene.camera.eyeposition[]) for i in eachindex(lines_in_axis)]...)
+    newlines1=[split_line(lines_in_axis[i],Nlines,ax.scene.camera.eyeposition[]) for i in eachindex(lines_in_axis)]
+    newlines=reduce(vcat,newlines1)
+    
+    display(newlines)
     sort!(newlines,by=x->x.distance_to_camera)
+    
     empty3!(ax,[Lines{Tuple{Vector{Point{3,Float32}}}}])
+    
     for line in newlines[end:-1:1]
         lines!(ax,line.x,line.y,line.z,color=line.color)
     end
